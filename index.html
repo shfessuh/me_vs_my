@@ -1,0 +1,141 @@
+<!-- Inspo: https://www.youtube.com/watch?v=TXeDhdNHpWE & https://www.youtube.com/watch?v=Qd3JZ8J3-Mg&t=385s -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barrio&family=Bowlby+One+SC&family=Climate+Crisis&family=Frijole&family=Kranky&family=Rubik+Glitch&family=Finger+Paint&family=Rubik+Puddles&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/Users/sana/Infinite_zoom/Infinity-sign.png">
+    <title>Infinite Zoom</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1 class="cool-name">Infinite Feed</h1>
+    <h2 class="sub-name">Infinite possibilities—remix the experience</h2>
+    <div class="outer-frame">
+        <div class="inner-frame">
+            <canvas id="stage" width="1800" height="1000"></canvas>
+        </div>    
+    </div>
+    <br>
+    <button id="zoomBtn" class="zoom-upload">  🎥 Go live</button>
+    <label for="fileInput" class="custom-upload">📤 Upload Post</label>
+    <input type="file" id="fileInput" multiple hidden />
+
+    <br>
+    <script src="myImage.js"></script>
+    <script>
+        let myImages = []; 
+        let offset = 0; 
+        let zooming = false; 
+        let zoomFrame; 
+        const stage = document.getElementById("stage");
+        const ctx = stage.getContext("2d");
+
+        fileInput.addEventListener("change", (event) => {
+            const files = Array.from(event.target.files);
+            if (files.length > 0) {
+                loadImages(files);
+            }
+        });
+        
+        function loadImages(files) {
+            myImages = files.map((file) => {
+                const img = new MyImage();
+                img.loadAndDrawImage(file);
+                return img;
+            });
+            offset = 0; 
+            renderImageList();
+            saveImagesToLocalStorage();
+            
+        }
+         // saving images to localstorage was with the help of AI specifically Chatgpt and DEEPSEEK
+        function saveImagesToLocalStorage() {
+            const imageData = myImages.map(img => img.getBase64());
+            const dataSize = JSON.stringify(imageData).length;
+            localStorage.setItem('savedImages', JSON.stringify(imageData));
+        }
+    
+        async function loadImages(files) {
+            localStorage.clear();
+            myImages = await Promise.all(files.map(async (file) => {
+                const img = new MyImage();
+                await img.loadAndDrawImage(file);
+                return img;
+            }));
+
+            offset = 0;
+            renderImageList();
+            saveImagesToLocalStorage(); 
+        }
+
+        window.addEventListener("load", loadImagesFromLocalStorage);
+        function renderImageList() {
+            const thumbs = document.querySelectorAll(".image-thumb");
+            thumbs.forEach((thumb) => thumb.remove());
+            myImages.forEach((img) => img.addTo(document.body));
+            myImages.forEach((img) => img.addClass("image-thumb"));
+        }
+
+        document.getElementById("zoomBtn").addEventListener("click", function () {
+            zooming = !zooming;
+            if (zooming) {
+                zoomBtn.disabled = false;
+                zoom();
+            } else {
+                cancelAnimationFrame(zoomFrame); 
+            }
+        });
+        function zoom() {
+            if (!zooming || myImages.length === 0) return;
+
+            ctx.clearRect(0, 0, stage.width, stage.height);
+
+            const index = Math.floor(offset); 
+            const percent = offset - index; 
+
+            
+            const scale = 1 / (1 + percent); 
+            const width = stage.width * scale;
+            const height = stage.height * scale;
+            const left = (stage.width - width) / 2;
+            const top = (stage.height - height) / 2;
+
+            const img = myImages[index % myImages.length]; 
+            img.draw(ctx, left, top, width, height);
+
+            for (let i = index - 1; i >= 0; i--) {
+                const prevImg = myImages[i % myImages.length];
+                const prevScale = 1 / (1 + (index - i) + percent); 
+                const prevWidth = stage.width * prevScale;
+                const prevHeight = stage.height * prevScale;
+                const prevLeft = (stage.width - prevWidth) / 2;
+                const prevTop = (stage.height - prevHeight) / 2;
+                prevImg.draw(ctx, prevLeft, prevTop, prevWidth, prevHeight);
+            }
+
+            const baseSpeed = 0.005;
+            offset += baseSpeed ;
+
+        
+            if (offset >= myImages.length) {
+                offset = 0.9;
+            }
+
+            zoomFrame = requestAnimationFrame(zoom);
+        }
+
+        function initializeImages(num) {
+            const imgs = [];
+            for (let i = 0; i < num; i++) {
+                imgs.push(new MyImage(null, 1920, 1080));
+            }
+            return imgs;
+        }
+       myImages = initializeImages();
+    </script>
+</body>
+</html>
